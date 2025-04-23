@@ -344,7 +344,7 @@ jobs:
           echo "" >> boby.txt
 
       - name: Upload ROM to Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: output
           path: |

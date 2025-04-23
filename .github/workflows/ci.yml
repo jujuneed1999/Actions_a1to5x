@@ -113,8 +113,13 @@ jobs:
             sudo mkdir system
             sudo mount output/system.img system
             sudo du -sb system
-            echo "Listing files under system/"
-            find system/
+            fstab_path=$(find system/ -name "fstab.qcom" 2>/dev/null | head -n 1)
+            if [[ -z "$fstab_path" ]]; then
+            echo "fstab.qcom tidak ditemukan!" >&2
+            exit 1
+            else
+            echo "Menemukan fstab di: $fstab_path"
+            fi
             cat system/system/vendor/etc/fstab.qcom
             sudo cp -f system/system/vendor/etc/fstab.qcom fstab.qcom
             fstab="system/system/vendor/etc/fstab.qcom"

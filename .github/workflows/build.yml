@@ -1,0 +1,69 @@
+name: Build Python 3.13.3 for Android and Create Magisk Module
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install clang make zip wget unzip
+
+    - name: Download Android NDK
+      run: |
+        wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
+        unzip android-ndk-*.zip
+        echo "NDK installed"
+
+    - name: Build Python 3.13.3
+      run: |
+        wget https://www.python.org/ftp/python/3.13.3/Python-3.13.3.tgz
+        tar -xf Python-3.13.3.tgz
+        cd Python-3.13.3
+
+        export NDK_DIR=$GITHUB_WORKSPACE/android-ndk-r26d
+        export PATH=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+
+        ./configure \
+          --host=aarch64-linux-android \
+          --build=$(./config.guess) \
+          --prefix=/usr/local \
+          CC="aarch64-linux-android21-clang" \
+          CXX="aarch64-linux-android21-clang++" \
+          --disable-ipv6 \
+          ac_cv_file__dev_ptmx=yes \
+          ac_cv_file__dev_ptc=no
+
+        make -j$(nproc)
+
+    - name: Create Magisk Module structure
+      run: |
+        mkdir -p magisk/python-magisk/system/bin
+        cp Python-3.13.3/python magisk/python-magisk/system/bin/python3
+
+        cat > magisk/python-magisk/module.prop << EOF
+id=python3-magisk
+name=Python3 for Android
+version=3.13.3
+versionCode=3133
+author=build-bot
+description=Python 3.13.3 statically compiled for Android via Magisk
+EOF
+
+    - name: Zip Magisk Module
+      run: |
+        cd magisk
+        zip -r python-magisk.zip python-magisk
+
+    - name: Upload Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: magisk/python-magisk.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

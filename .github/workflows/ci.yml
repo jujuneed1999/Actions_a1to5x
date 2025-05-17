@@ -61,35 +61,42 @@ jobs:
         name: Download
         run: |
           echo "Download"
-          if [[ ${{ github.event.inputs.filelink }} == *"drive.google.com"* ]]; then
-              if [[ ${{ github.event.inputs.filelink }} == *"file"* ]]; then
-                  DOWNLOAD_LINK=$(echo ${{ github.event.inputs.filelink }} | cut -d / -f 6)
+
+          FILELINK="${{ github.event.inputs.filelink }}"
+          FILENAME_INPUT="${{ github.event.inputs.filename }}"
+          MODE="${{ github.event.inputs.mode }}"
+          OUTPUT="${{ github.event.inputs.output }}"
+
+          if [[ "$FILELINK" == *"drive.google.com"* ]]; then
+              if [[ "$FILELINK" == *"file"* ]]; then
+                  DOWNLOAD_LINK=$(echo "$FILELINK" | cut -d / -f 6)
                   echo "DOWNLOAD_LINK: $DOWNLOAD_LINK"
-                  gdown https://drive.google.com/uc?id=${DOWNLOAD_LINK}
-              elif [[ ${{ github.event.inputs.filelink }} == *"id"* ]]; then
-                  DOWNLOAD_LINK1=$(echo ${{ github.event.inputs.filelink }} | cut -d = -f 2 | cut -d '&' -f 1)
-                  DOWNLOAD_LINK2=$(echo ${{ github.event.inputs.filelink }} | cut -d = -f 4)
+                  gdown "https://drive.google.com/uc?id=${DOWNLOAD_LINK}"
+              elif [[ "$FILELINK" == *"id"* ]]; then
+                  DOWNLOAD_LINK1=$(echo "$FILELINK" | cut -d = -f 2 | cut -d '&' -f 1)
+                  DOWNLOAD_LINK2=$(echo "$FILELINK" | cut -d = -f 4)
                   echo "DOWNLOAD_LINK1: $DOWNLOAD_LINK1"
                   echo "DOWNLOAD_LINK2: $DOWNLOAD_LINK2"
-                  gdown https://drive.google.com/uc?id=${DOWNLOAD_LINK1} || gdown https://drive.google.com/uc?id=${DOWNLOAD_LINK2}
+                  gdown "https://drive.google.com/uc?id=${DOWNLOAD_LINK1}" || gdown "https://drive.google.com/uc?id=${DOWNLOAD_LINK2}"
               fi
           else
-              if [[ ! -z "${{ github.event.inputs.filename }}" ]]; then
-                  FILENAME="${{ github.event.inputs.filename }}"
-                  ${{ github.event.inputs.mode }} ${{ github.event.inputs.filelink }} -${{ github.event.inputs.output }} "$FILENAME"
+              if [[ ! -z "$FILENAME_INPUT" ]]; then
+                  $MODE "$FILELINK" -$OUTPUT "$FILENAME_INPUT"
               else
-                  ${{ github.event.inputs.mode }} ${{ github.event.inputs.filelink }}
+                  $MODE "$FILELINK"
               fi
           fi
+
           ls
           FILENAME="$(find . -size +100M -exec ls -lS {} \+ | head -1 | awk '{print $9}')"
           if [[ -z "$FILENAME" ]]; then
-              exit 1
               echo "The file was not downloaded successfully"
+              exit 1
           fi 
+
           echo "FILENAME: $FILENAME"
-          FILENAME=$(basename ${FILENAME})
-          NAME=$(basename $FILENAME .zip)
+          FILENAME=$(basename "$FILENAME")
+          NAME=$(basename "$FILENAME" .zip)
           echo "filename=$FILENAME" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
